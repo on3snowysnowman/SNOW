@@ -1,0 +1,70 @@
+16 bit CPU ISA.
+
+16 general registers, x0 -> x15.
+x0 is hardwired 0
+
+x15 is link register
+x14 is stack pointer
+
+Stack pointer register
+flags register 
+
+Instructions:
+
+    add         : Add contents of two registers, sets flags                             (dst_reg = src_reg1 + src_reg2)
+    addi        : Adds an immediate to a register, does not set flags                   (dst_reg += immedate)
+    movl        : Moves an immediate into lower byte of register, clears upper bits     (dst_reg_low_byte = immediate, dst_reg_high_byte = 0)
+    movh        : Moves an immediate into higher byte of register, leaves lower bits    (dst_reg_high_byte = immediate)
+    sub         : Subtract contents of two registers, sets flags                        (dst_reg = src_reg1 - src_reg2)
+    lodb        : Loads a byte from memory into a register                              (dst_reg = mem[addr_reg]) 1 byte load
+    lodw        : Loads a word (2 bytes) from memory into a register                    (dst_reg = mem[addr_reg]) 2 byte load
+    strb        : Stores a byte from a register into memory                             (mem[addr_reg] = src_reg) 1 byte store
+    strw        : Stores a word (2 bytes) from a register into memory                   (mem[addr_reg] = src_reg) 2 byte store
+    mul         : Multiplies contents of two registers                                  (dst_reg = src_reg1 * src_reg2)
+    div         : Divides contents of two registers                                     (dst_reg = src_reg1 / src_reg2)
+    b (cond)    : Branch on condition of flags (EQ, NEQ, LT, GT), instruction is encoded to select which.
+    blink       : Unconditional branch with a register argument and moves PC + 2addr in x15
+
+    extended op:
+    [
+        and     : Ands two registers 
+        nand    : Nands two registers
+        or      : Ors two registers 
+        nor     : Nors two registers
+        xor     : Excl Ors two registers
+        xnor    : Excl Nors two registers
+        not     : Inverts a register's bits
+        sextb   : Sign extends a lower byte of a register 
+        lsh     : Left shifts a register by an immediate
+        rsh     : Right shits a register by an immediate
+        noop    : No operation
+        hlt     : Halts the cpu
+    ]
+
+
+Pseudo Instructions (Not in the cpu architecture, replaced by other instructions):
+
+    mov     : Move contents of one reg to another 
+        mov x2, x1 -> add x2, x1, x0
+    cmp     : Compares two values, setting flags
+        cmp x1, x2 -> sub x0, x1, x2
+    subi    : Subtracts an immediate from a register, doesn't set flags
+        sub x1, #IMM -> addi x1, -#IMM
+    call <target> : Branches to a target and links the return register x15
+        call <target> -> movl x15 <target_addr_low_byte> \ movh x15 <targ_addr_high_byte> \ blink x15 x15
+    ret : Branches to the address in x15
+        ret -> blink x15 x0
+    
+
+.o file layout:
+
+== Header ==
+"SNOW" magic number
+Text section size
+Symbol table size
+Relocation table size
+
+
+
+
+
