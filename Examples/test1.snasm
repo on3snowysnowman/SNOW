@@ -1,14 +1,11 @@
 
 
-.text
+.text     
+ 
+_start: 
 
-_start:
-    movl    x1,  #3
-    movl    x2,  #0
-    add     x2,  x1,  x2
-    addi    x2,  #5
-    mul     x2,  x1,  x1
-
+    add x0, 
+    b _start
 
 .data
 

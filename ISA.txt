@@ -5,63 +5,179 @@
 x14 is stack pointer register
 x15 is link register
 
-flags register 
-
-x0 -> x3 are caller saved 
-x4 -> x13 are callee saved
-
-
-Instructions:
-
-    add         : Add contents of two registers, sets flags                             (dst_reg = src_reg1 + src_reg2)
-    addi        : Adds an immediate to a register, does not set flags                   (dst_reg += immedate)
-    movl        : Moves an immediate into lower byte of register, clears upper bits     (dst_reg_low_byte = immediate, dst_reg_high_byte = 0)
-    movh        : Moves an immediate into higher byte of register, leaves lower bits    (dst_reg_high_byte = immediate)
-    sub         : Subtract contents of two registers, sets flags                        (dst_reg = src_reg1 - src_reg2)
-    lodb        : Loads a byte from memory into a register                              (dst_reg = mem[addr_reg]) 1 byte load
-    lodw        : Loads a word (2 bytes) from memory into a register                    (dst_reg = mem[addr_reg]) 2 byte load
-    strb        : Stores a byte from a register into memory                             (mem[addr_reg] = src_reg) 1 byte store
-    strw        : Stores a word (2 bytes) from a register into memory                   (mem[addr_reg] = src_reg) 2 byte store
-    mul         : Multiplies contents of two registers                                  (dst_reg = src_reg1 * src_reg2)
-    div         : Divides contents of two registers                                     (dst_reg = src_reg1 / src_reg2)
-    b           : Branches unconditionally with a 12 bit signed offset 
-    beq         : Conditional branches with 12 bit signed offset
-    bne
-    blt
-    bgt
-
-    extended op:
-    [
-        and     : Ands two registers 
-        nand    : Nands two registers
-        or      : Ors two registers 
-        nor     : Nors two registers
-        xor     : Excl Ors two registers
-        xnor    : Excl Nors two registers
-        not     : Inverts a register's bits
-        sextb   : Sign extends a lower byte of a register 
-        lsh     : Left shifts a register by an immediate
-        rsh     : Right shits a register by an immediate
-        noop    : No operation
-        hlt     : Halts the cpu
-        blink   : Unconditional branch with a register argument and moves PC + 1 in x15
-        cmp     : Compares two registers, setting ALU flags.
-        ret     : Sets the PC register to value in x15
-        mov     : Moves contents of one register into another
-    ]
+x0-x3   argument/return + caller-saved
+x4-x7   caller-saved
+x8-x13  callee-saved
+x14     SP
+x15     LR
 
 
-Pseudo Instructions (Not in the cpu architecture, replaced by other instructions):
+Regular instructions that utilize all 16 bits.
+Instructions: 
 
-    subi    : Subtracts an immediate from a register, doesn't set flags
-        sub x1, #IMM -> addi x1, -#IMM
-    call <target> : Branches to a target and links the return register x15
-        call <target> -> movl x15 <target_addr_low_byte> \ movh x15 <targ_addr_high_byte> \ blink x15 x15
-    push : Pushes a register onto the stack
-        push x1 -> subi x14, #2 \ strw x1, x14
-    pop  : Pops a word from the stack into a register
-        pop x1 -> lodw x1, x14 \ addi x14, #2
+    0000
+    add         : Adds contents of two registers and stores it in a register.
+        add x0, x1, x2
+
+    0001
+    addi        : Adds an immediate directly to a register. Immediate must be in the range [-128, 127].
+        add x0, #1
+
+    0010
+    movl        : Moves an immediate into the lower byte of a register, clears upper byte. 
+                    Immediate must be in the range [-128, 255].
+        movl x0, #IMM
+
+    0011
+    movh        : Moves an immedate into the higher byte of a register, does not modify lower byte.
+                    Immediate must be in the range [-128, 255].
+        movh x0, #IMM
+
+    0100
+    sub         : Subtracts contents of two registers and stores it in a register.
+        sub x0, x1, x2
+
+    mem instruction uses a 3 bit field to dispatch between the 3 load options and 2 store options.
+    0101
+    mem
+
+    mem op: 000
+    lodb        : Loads a byte from memory into the lower byte of a register, clears upper byte.
+                
+        lodb x0, [x1] 
+
+    mem op: 001
+    lodsb       : Loads a byte from memory into a register and sign extends upper byte. 
+                    Same instruction as lodb but with a sign bit set
+        lodsb x0, [x1]
+
+    mem op: 010
+    lodw        : Loads a word from memory into a register.
+        lodw x0, [x1]
+
+    mem op: 011
+    strb        : Stores the lower byte of a register to memory.
+        strb x0, [x1]
+
+    mem op: 100
+    strw        : Stores a register to memory.
+        strw x0, [x1]
+
+    0110
+    mul         : Multiplies contents of two registers and stores it in a register.
+        mul x0, x1, x2
+
+    0111
+    div         : Divides contents of two registers and stores it in a register.
+        div x0, x1, x2
+
+    1000
+    b           : Unconditional branch with a signed instructional offset. 
+                    Offset must be in the range [-2048, 2047].
+        b <offset>
     
+    1001
+    bcond       : Conditional branch with a signed instructional offset.
+                    Offset must be in the range [-256, 255].
+                    Conditions include : EQL NEQ GTU LTU GTS LTS
+        beql <offset>
+
+    1010
+    extended    : Extended operation which utilizes an extra opcode with 4 bits
+                    to dispatch to other instructions with a payload of 8 bits.
+
+Extended instructions that dispatch on an additional extended opcode and utilize 12 bits.
+Extended Instructions:
+
+    0000
+    and         : Ands the contents of two registers and stores it in the first register.
+        and x0, x1
+
+    0001
+    nand        : Nands the contents of two registers and stores it in the first register.
+        nand x0, x1
+
+    0010
+    or          : Ors the contents of two registers and stores it in the first register.
+        or x0, x1
+
+    0011
+    nor         : Nors the contents of two registers and stores it in the first register.
+        nor x0, x1
+
+    0100
+    xor         : Xors the contents of two registers and stores it in the first register.
+        xor x0, x1
+
+    0101
+    xnor        : Xnors the contents of two registers and stores it in the first register.
+        xnor x0, x1
+
+    0110
+    not         : Nots the contents of a register and stores it in a register.
+        not x0, x1
+
+    0111
+    lsl         : Logical shift lefts a register by a 4 bit unsigned immediate.
+        lsl x0, #2
+    
+    1000
+    lsr         : Logical shift rights a register by a 4 bit unsigned immediate.
+        lsr x0, #9
+
+    1001
+    noop        : No operation
+        noop
+
+    1010
+    hlt         : Halts the cpu
+        hlt
+
+    1011W
+    bl          : Branches to an address in a register and places PC + 1 in a 
+                    register. 
+        bl x0, x15
+    
+    1100
+    br          : Unconditional branch to the address in a register.
+        br x0
+
+    1101
+    cmp         : Compares two registers and sets ALU flags.
+        cmp x0, x1
+    
+
+    1110
+    mov         : Moves contents of one register to another.
+        mov x0, x1
+
+
+Instructions that are not implemented in the CPU but are recognized by the assembler
+and replaced with equivalent CPU recognized instructions.
+Psuedo Instructions:
+
+    subi        : Subtracts an immediate directly from a register. Immediate must be in the range [-128, 127].
+        subi x0, #IMM -> addi x0, -#IMM
+
+    call        : Branches to an address and links x15 register with PC + 1
+        call <addr> -> movl x15 <target_addr_low_byte> \ movh x15 <targ_addr_high_byte> \ blink x15 x15
+
+    ret         : Branches to the address in the link reg x15
+        ret -> br x15
+
+    push        : Pushes a register onto the stack.
+        push x0 -> subi x14, #2 \ strw x0, [x14]
+
+    pop         : Pops a word from the stack into a register
+        pop x0 -> lodw x0, [x14] \ addi x14, #2 
+
+
+Signed compare:
+    A > B   => Z == 0 && N == V
+    A < B   => N != V
+Unsigned compare:
+    A > B   => C == 1 && Z == 0
+    A < B   => C == 0
 
 .o file layout:
 
