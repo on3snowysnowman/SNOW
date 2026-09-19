@@ -4,8 +4,8 @@
  
 _start: 
 
-    add x0, 
-    b _start
+    add x0, x0, x2
+    bl  x3, x15
 
 .data
 

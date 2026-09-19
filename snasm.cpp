@@ -133,8 +133,8 @@ struct BCondInst
 
 struct BLinkInstr
 {
-    reg_T link;
     reg_T addr;
+    reg_T link;
 };
 
 struct BRegInstr
@@ -214,7 +214,8 @@ struct MovInstr
 
 struct CallInstr
 {
-    int16_t offset; // Offset in instruction count, not bytes.
+    // int16_t offset; // Offset in instruction count, not bytes.
+    std::string label;
 };
 
 struct RetInstr {};
@@ -266,50 +267,14 @@ using Instruction = std::variant<
     PopInstr
 >;
 
-// struct Instruction
-// {
-//     // Type this instruction represents.
-//     InstrType type = InstrType::ADD;
+struct DefinedLabel
+{
+    // Section the label is defined in.
+    SECTION section;
 
-//     std::variant<
-//         AddInstr,
-//         AddImInstr,
-//         MovLInstr,
-//         MovHInstr,
-//         SubInstr,
-//         SubImInstr,
-//         LodBInstr,
-//         LodSBInstr,
-//         LodWInstr,
-//         StrBInstr,
-//         StrWInstr,
-//         MulInstr,
-//         DivInstr,
-//         BUncondInst,
-//         BCondInst,
-//         BLinkInstr,
-//         BRegInstr,
-//         AndInstr,
-//         NandInstr,
-//         OrInstr,
-//         NorInstr,
-//         XorInstr,
-//         XnorInstr,
-//         NotInstr,
-//         LslInstr,
-//         LsrInstr,
-//         NoopInstr,
-//         HaltInstr,
-//         CmpInstr,
-//         MovInstr,
-//         CallInstr,
-//         RetInstr,
-//         PushInstr,
-//         PopInstr
-//     > as;
-// };
-
-
+    // Offset from the start of the defined section.
+    size_t offset;
+};
 
 
 // Global Variables ------------------------------------------------------------
@@ -337,6 +302,9 @@ static std::vector<Instruction> instructions;
 // List of bytes in the data section. Each index corresponds to the same offset 
 // from the data section.
 static std::vector<uint8_t> data;
+
+// Labels defined in the source file. 
+static std::unordered_map<std::string, DefinedLabel> labels;
 
 
 // Functions -------------------------------------------------------------------
@@ -830,6 +798,8 @@ static void parse_BUncondInst(const std::string &line, size_t &idx)
     {
         .label = std::move(label)
     };
+
+    instructions.push_back(instr);
 }
 
 static void parse_BCondInst(
@@ -854,7 +824,7 @@ static void parse_BCondInst(
         std::cout << " -> Expected label\n";
     }
 
-    
+
     idx += end;
     
     std::string label {view};
@@ -864,109 +834,278 @@ static void parse_BCondInst(
         .cond = cond,
         .label = std::move(label),
     };
+
+    instructions.push_back(instr);
 }
 
 static void parse_BLinkInstr(const std::string &line, size_t &idx)
 {
+    reg_T addr = parse_reg(line, idx);
+    parse_comma(line, idx);
 
+    reg_T link = parse_reg(line, idx);
+
+    Instruction instr = BLinkInstr
+    {
+        .addr = addr,
+        .link = link
+    };
+
+    instructions.push_back(instr);
 }
 
 static void parse_BRegInstr(const std::string &line, size_t &idx)
 {
+    reg_T addr = parse_reg(line, idx);
 
+    Instruction instr = BRegInstr
+    {
+        .addr = addr
+    };
+
+    instructions.push_back(instr);
 }
 
 static void parse_AndInstr(const std::string &line, size_t &idx)
 {
+    reg_T dst = parse_reg(line, idx);
+    parse_comma(line, idx);
 
+    reg_T src = parse_reg(line, idx);
+
+    Instruction instr = AndInstr
+    {
+        .dst = dst,
+        .src = src
+    };
+
+    instructions.push_back(instr);
 }
 
 static void parse_NandInstr(const std::string &line, size_t &idx)
 {
+    reg_T dst = parse_reg(line, idx);
+    parse_comma(line, idx);
 
+    reg_T src = parse_reg(line, idx);
+
+    Instruction instr = NandInstr
+    {
+        .dst = dst,
+        .src = src
+    };
+
+    instructions.push_back(instr);
 }
 
 static void parse_OrInstr(const std::string &line, size_t &idx)
 {
+    reg_T dst = parse_reg(line, idx);
+    parse_comma(line, idx);
 
+    reg_T src = parse_reg(line, idx);
+
+    Instruction instr = OrInstr
+    {
+        .dst = dst,
+        .src = src
+    };
+
+    instructions.push_back(instr);
 }
 
 static void parse_NorInstr(const std::string &line, size_t &idx)
 {
+    reg_T dst = parse_reg(line, idx);
+    parse_comma(line, idx);
 
+    reg_T src = parse_reg(line, idx);
+
+    Instruction instr = NorInstr
+    {
+        .dst = dst,
+        .src = src
+    };
+
+    instructions.push_back(instr);
 }
 
 static void parse_XorInstr(const std::string &line, size_t &idx)
 {
+    reg_T dst = parse_reg(line, idx);
+    parse_comma(line, idx);
 
+    reg_T src = parse_reg(line, idx);
+
+    Instruction instr = XorInstr
+    {
+        .dst = dst,
+        .src = src
+    };
+
+    instructions.push_back(instr);
 }
 
 static void parse_XnorInstr(const std::string &line, size_t &idx)
 {
+    reg_T dst = parse_reg(line, idx);
+    parse_comma(line, idx);
 
+    reg_T src = parse_reg(line, idx);
+
+    Instruction instr = XnorInstr
+    {
+        .dst = dst,
+        .src = src
+    };
+
+    instructions.push_back(instr);
 }
 
 static void parse_NotInstr(const std::string &line, size_t &idx)
 {
+    reg_T dst = parse_reg(line, idx);
+    parse_comma(line, idx);
 
+    reg_T src = parse_reg(line, idx);
+
+    Instruction instr = NotInstr
+    {
+        .dst = dst,
+        .src = src
+    };
+
+    instructions.push_back(instr);
 }
 
 static void parse_LslInstr(const std::string &line, size_t &idx)
 {
+    reg_T dst = parse_reg(line, idx);
+    parse_comma(line, idx);
 
+    int8_t imm = parse_immediate(line, idx, 0, 16);
+
+    Instruction instr = LslInstr
+    {
+        .dst = dst,
+        .imm = imm
+    };
+    
+    instructions.push_back(instr);
 }
 
 static void parse_LsrInstr(const std::string &line, size_t &idx)
 {
+     reg_T dst = parse_reg(line, idx);
+    parse_comma(line, idx);
 
+    int8_t imm = parse_immediate(line, idx, 0, 16);
+
+    Instruction instr = LslInstr
+    {
+        .dst = dst,
+        .imm = imm
+    };
+
+    instructions.push_back(instr);
 }
 
-static void parse_NoopInstr(const std::string &line, size_t &idx)
+static void parse_NoopInstr()
 {
-
+    instructions.push_back(NoopInstr{});
 }
 
-static void parse_HaltInstr(const std::string &line, size_t &idx)
+static void parse_HaltInstr()
 {
-
+    instructions.push_back(HaltInstr{});
 }
 
 static void parse_CmpInstr(const std::string &line, size_t &idx)
 {
+    reg_T src1 = parse_reg(line, idx);
+    parse_comma(line, idx);
 
+    reg_T src2 = parse_reg(line, idx);
+
+    Instruction instr = CmpInstr 
+    {
+        .src1 = src1,
+        .src2 = src2
+    };
+
+    instructions.push_back(instr);
 }
 
 static void parse_MovInstr(const std::string &line, size_t &idx)
 {
+    reg_T dst = parse_reg(line, idx);
+    parse_comma(line, idx);
 
+    reg_T src = parse_reg(line, idx);
+
+    Instruction instr = MovInstr
+    {
+        .dst = dst,
+        .src = src
+    };
+
+    instructions.push_back(instr);
 }
 
 static void parse_CallInstr(const std::string &line, size_t &idx)
 {
+    skip_whitespace(line, idx);
+    std::string_view view = make_view(line, idx);
 
+    const size_t start = idx;
+    size_t end = view.find_first_of(" ");
+
+    if(end == std::string_view::npos)
+    {
+        end = view.size();
+    }
+
+    if(end == 0)
+    {
+        print_loc(start);
+        std::cout << " -> Expected label\n";
+    }
+
+    idx += end;
+
+    std::string label {view};
+
+    Instruction instr = CallInstr
+    {
+        .label = std::move(label)
+    };
+
+    instructions.push_back(instr);
 }
 
-static void parse_RetInstr(const std::string &line, size_t &idx)
+static void parse_RetInstr()
 {
-
+    instructions.push_back(RetInstr{});
 }
 
 static void parse_PushInstr(const std::string &line, size_t &idx)
 {
+    reg_T reg = parse_reg(line, idx);
 
+    instructions.push_back(PushInstr{reg});
 }
 
 static void parse_PopInstr(const std::string &line, size_t &idx)
 {
+    reg_T reg = parse_reg(line, idx);
 
+    instructions.push_back(PopInstr{reg});
 }
 
 
 static void parse_instr(const std::string &line, size_t &idx)
 {
     std::string_view view {line.data() + idx, line.size() - idx};
-
-    std::cout << "Parsing instr: \"" << view << "\"\n";
 
     const size_t start = idx;
     size_t end = view.find_first_of(" ");
@@ -980,8 +1119,6 @@ static void parse_instr(const std::string &line, size_t &idx)
 
     view = view.substr(0, end);
     idx += end;
-
-    std::cout << "Parsing instruction name: " << view << '\n';
 
     switch(view.size())
     {
@@ -1021,10 +1158,10 @@ static void parse_instr(const std::string &line, size_t &idx)
             else if(view == "not") { parse_NotInstr(line, idx); }
             else if(view == "lsl") { parse_LslInstr(line, idx); }
             else if(view == "lsr") { parse_LsrInstr(line, idx); }
-            else if(view == "hlt") { parse_HaltInstr(line, idx); }
+            else if(view == "hlt") { parse_HaltInstr(); }
             else if(view == "cmp") { parse_CmpInstr(line, idx); }
             else if(view == "mov") { parse_MovInstr(line, idx); }
-            else if(view == "ret") { parse_RetInstr(line, idx); }
+            else if(view == "ret") { parse_RetInstr(); }
             else if(view == "pop") { parse_PopInstr(line, idx); }
             else
             {
@@ -1057,8 +1194,8 @@ static void parse_instr(const std::string &line, size_t &idx)
             else if(view == "blts")
                 { parse_BCondInst(line, idx, BCondType::LTS); }
             else if(view == "nand") { parse_NandInstr(line, idx); }
-            else if(view == "xnor") { parse_XorInstr(line, idx); }
-            else if(view == "noop") { parse_NoopInstr(line, idx); }
+            else if(view == "xnor") { parse_XnorInstr(line, idx); }
+            else if(view == "noop") { parse_NoopInstr(); }
             else if(view == "call") { parse_CallInstr(line, idx); }
             else if(view == "push") { parse_PushInstr(line, idx); }
             else
@@ -1113,10 +1250,20 @@ static void parse_instr(const std::string &line, size_t &idx)
 
 static void parse_dataop(const std::string &line, size_t &idx)
 {
+    skip_whitespace(line, idx);
+
+    if(idx >= line.size()) { return; }
+
     std::string_view view {line.data() + idx, line.size() - idx};
 
     std::cout << "Parsing dataop: \"" << view << "\"\n";
 
+    size_t end = view.find_first_of(" ");
+
+    if(end == std::string_view::npos)
+    {
+        end = view.size();
+    } 
 }
 
 static void parse_line(const std::string &line)
@@ -1181,16 +1328,38 @@ static void parse_line(const std::string &line)
 
     std::string_view view = make_view(line, idx);
 
-    // Label
-
     size_t colon_pos = view.find_first_of(":");
 
+    // Label
     if(colon_pos != std::string_view::npos)
     {
         view = view.substr(0, colon_pos);
 
+        const size_t start = idx;
+
         std::cout << "Got label: " << view << '\n';
         idx += colon_pos + 1;
+    
+        std::string label_ident {view};
+    
+        const auto it = labels.find(label_ident);
+
+        if(it != labels.end())
+        {
+            print_loc(start);
+            std::cout << " -> Label already defined: \"" << 
+                label_ident << "\"\n";
+            exit(-1);
+        }
+
+        DefinedLabel label
+        {
+            .section = current_section,
+            .offset = 
+                current_section == SECTION::TEXT ? text_offset : data_offset
+        };
+
+        labels.emplace(std::move(label_ident), label);
     }
 
     skip_whitespace(line, idx);
@@ -1203,14 +1372,19 @@ static void parse_line(const std::string &line)
 
 
 /**
- * @brief Makes a first pass over the source code, forming instruction
- * containers and defining labels.
+ * @brief Makes a first pass over the source code, collecting instructions and 
+ * data operations, as well as defining labels.
  */
 static void first_pass()
 {
     std::string line;
 
     while(std::getline(in_file, line)) { parse_line(line); }
+}
+
+static void second_pass()
+{
+
 }
 
 int main(int argc, char **argv)
